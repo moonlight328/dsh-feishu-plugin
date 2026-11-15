@@ -80,6 +80,7 @@ const moveSteps = openDocs + `
      }, 1500);`;
 
 const shots = [
+  ['web', `setTimeout(() => { document.querySelectorAll('.fs-tab')[2].click(); }, 500);`],
   ['move', moveSteps],
   ['type', openDoc + `setTimeout(() => { const b = [...document.querySelectorAll('.fs-btn')].find((x) => x.textContent.trim() === 'Aa'); b && b.click(); }, 1500);`],
   ['chats', ''],

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// 发布：bump 版本 → 更新 CHANGELOG → commit → tag → push
-// 用法：node scripts/release.mjs "新功能：一句话说明" [major|minor|patch]
+// 发布：自检 → bump 版本 → 写 CHANGELOG → 同步安装目录 → commit → tag → push
+// 用法：node scripts/release.mjs "本次改动说明" [major|minor|patch]
 import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import path from 'node:path';
@@ -17,11 +17,37 @@ if (!note) {
   process.exit(1);
 }
 
-// 1. 先自检
+// 1. 自检
 say('· 语法自检');
 execFileSync(process.execPath, [path.join(root, 'scripts', 'lint.mjs')], { cwd: root, stdio: 'inherit' });
 
-// 1.5 同步到安装目录（仓库是唯一源）
+// 2. bump 版本
+const pkgFile = path.join(root, 'package.json');
+const pkg = JSON.parse(fs.readFileSync(pkgFile, 'utf8'));
+const prev = String(pkg.version);
+const parts = prev.split('.').map(Number);
+const [major, minor, patch] = [parts[0] || 0, parts[1] || 0, parts[2] || 0];
+const next =
+  bumpKind === 'major'
+    ? `${major + 1}.0.0`
+    : bumpKind === 'patch'
+      ? `${major}.${minor}.${patch + 1}`
+      : `${major}.${minor + 1}.0`;
+pkg.version = next;
+fs.writeFileSync(pkgFile, JSON.stringify(pkg, null, 2) + '\n', 'utf8');
+say(`· 版本 ${prev} → ${next}`);
+
+// 3. 写 CHANGELOG
+const changeFile = path.join(root, 'CHANGELOG.md');
+const today = new Date().toISOString().slice(0, 10);
+const oldLog = fs.existsSync(changeFile) ? fs.readFileSync(changeFile, 'utf8') : '# 更新日志\n';
+const marker = '## ';
+const head = oldLog.indexOf(marker);
+const entry = `## ${next}（${today}）\n\n- ${note}\n\n`;
+fs.writeFileSync(changeFile, head >= 0 ? oldLog.slice(0, head) + entry + oldLog.slice(head) : oldLog + '\n' + entry, 'utf8');
+say('· CHANGELOG 已更新');
+
+// 4. 同步到安装目录（仓库是唯一源）
 say('· 同步到安装目录');
 try {
   execFileSync(process.execPath, [path.join(root, 'scripts', 'sync.mjs')], { cwd: root, stdio: 'inherit' });
@@ -29,30 +55,7 @@ try {
   say('· 同步失败（不影响提交）');
 }
 
-// 2. bump 版本
-const pkgFile = path.join(root, 'package.json');
-const pkg = JSON.parse(fs.readFileSync(pkgFile, 'utf8'));
-const [major, minor, patch] = String(pkg.version).split('.').map(Number);
-const next =
-  bumpKind === 'major' ? `${major + 1}.0.0`
-  : bumpKind === 'patch' ? `${major}.${minor}.${patch + 1}`
-  : `${major}.${minor + 1}.0`;
-pkg.version = next;
-fs.writeFileSync(pkgFile, JSON.stringify(pkg, null, 2) + '\n', 'utf8');
-say(`· 版本 ${pkg.version} → ${next}`);
-
-// 3. 写 CHANGELOG
-const changeFile = path.join(root, 'CHANGELOG.md');
-const today = new Date().toISOString().slice(0, 10);
-const old = fs.existsSync(changeFile) ? fs.readFileSync(changeFile, 'utf8') : '# 更新日志\n';
-const marker = '## ';
-const head = old.indexOf(marker);
-const entry = `## ${next}（${today}）\n\n- ${note}\n\n`;
-const nextLog = head >= 0 ? old.slice(0, head) + entry + old.slice(head) : old + '\n' + entry;
-fs.writeFileSync(changeFile, nextLog, 'utf8');
-say('· CHANGELOG 已更新');
-
-// 4. 提交 + 打标签 + 推
+// 5. 提交 + 标签 + 推送
 run('git', ['add', '-A']);
 const status = run('git', ['status', '--porcelain']);
 if (!status) {

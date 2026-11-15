@@ -38,14 +38,15 @@ window.addEventListener('error', (e) => errs.push(String(e.message)));
 window.addEventListener('unhandledrejection', (e) => errs.push('rej: ' + (e.reason && e.reason.message)));
 window.fetch = async (url) => {
   const u = String(url);
-  const body = u.includes('/auth') ? { authorized: true, name: 'masuzu328', missing: [] }
+  const body = u.includes('/status') ? { ok: true, bot: { name: '测试机器人' } }
+    : u.includes('/auth') ? { authorized: true, name: 'masuzu328', missing: [] }
     : u.includes('/chats') ? { chats: [{ chatId: 'c1', name: 'DSH会话管理', description: '群会话' }, { chatId: 'c2', name: '设计组', description: '群会话' }] }
     : u.includes('/messages') ? { messages: [
-        { id: 'm1', type: 'text', text: '看得见吗', senderType: 'user', senderName: '成员', createTime: String(Date.now()/1000 - 300) },
-        { id: 'm2', type: 'text', text: '看得见。这条是从 DSH 面板发出来的。', senderType: 'app', senderName: '机器人', createTime: String(Date.now()/1000 - 240) },
-        { id: 'm3', type: 'sticker', text: '笑哭', senderType: 'user', senderName: '成员', createTime: String(Date.now()/1000 - 180) },
-        { id: 'm4', type: 'text', text: '那以后文案写完直接丢这儿？', senderType: 'user', senderName: '成员', createTime: String(Date.now()/1000 - 120) },
         { id: 'm5', type: 'text', text: '对，要么发群，要么建成飞书文档给你。', senderType: 'app', senderName: '机器人', createTime: String(Date.now()/1000 - 60) },
+        { id: 'm4', type: 'text', text: '那以后文案写完直接丢这儿？', senderType: 'user', senderName: '成员', createTime: String(Date.now()/1000 - 120) },
+        { id: 'm3', type: 'text', text: '笑哭', senderType: 'user', senderName: '成员', createTime: String(Date.now()/1000 - 180) },
+        { id: 'm2', type: 'text', text: '看得见。这条是从 DSH 面板发出来的。', senderType: 'app', senderName: '机器人', createTime: String(Date.now()/1000 - 240) },
+        { id: 'm1', type: 'text', text: '看得见吗', senderType: 'user', senderName: '成员', createTime: String(Date.now()/1000 - 300) },
       ] }
     : u.includes('/drive') ? ${mockDrive}
     : u.includes('/docblocks') ? ${mockBlocks}

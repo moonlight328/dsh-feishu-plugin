@@ -21,6 +21,14 @@ if (!note) {
 say('· 语法自检');
 execFileSync(process.execPath, [path.join(root, 'scripts', 'lint.mjs')], { cwd: root, stdio: 'inherit' });
 
+// 1.5 同步到安装目录（仓库是唯一源）
+say('· 同步到安装目录');
+try {
+  execFileSync(process.execPath, [path.join(root, 'scripts', 'sync.mjs')], { cwd: root, stdio: 'inherit' });
+} catch {
+  say('· 同步失败（不影响提交）');
+}
+
 // 2. bump 版本
 const pkgFile = path.join(root, 'package.json');
 const pkg = JSON.parse(fs.readFileSync(pkgFile, 'utf8'));

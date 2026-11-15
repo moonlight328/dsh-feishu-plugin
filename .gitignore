@@ -1,0 +1,25 @@
+# 依赖
+node_modules/
+pnpm-lock.yaml
+
+# 凭据：绝对不能进库
+.user-token.json
+.user-token.json.*
+auth-url.txt
+*.secret
+
+# 运行产物 / 调试文件
+*.log
+backups/
+preview.html
+preview.png
+repro*.html
+probe*.html
+shot-*.html
+shot-*.png
+*.bak
+*.bak-*
+
+# 系统
+.DS_Store
+Thumbs.db

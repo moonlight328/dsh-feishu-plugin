@@ -1,0 +1,119 @@
+# dsh-feishu-plugin
+
+把飞书接进 DSH（DeepSeek Harness）侧栏：在对话里收发群消息、浏览云空间文件夹、读写飞书文档。
+
+不用切浏览器，不用把文案复制来复制去。
+
+## 功能
+
+### 会话
+- 列出发机器人所在的群，收发消息
+- 支持文本、图片、表情（`[笑哭]` 这类短代码转成真表情）、文件、语音等类型
+- 5 秒轮询收新消息，滚动到底部自动贴底
+
+### 云空间（文件夹浏览）
+- **双身份切换**：「我的」（你的账号，OAuth） / 「机器人」（应用自己的空间）
+- 面包屑导航 + 「上一级」返回
+- 右键：新建文件夹 / 新建文档 / 打开 / 重命名 / **移动到其他文件夹** / 删除
+- 移动支持文件夹本身
+
+### 文档编辑
+- 块级编辑器：正文 / H1-H3 / 无序 / 有序 / 代码块，回车分段，行首 `#` 变标题、`-` 变列表
+- 悬停显示段类型标记，点箭头**按标题折叠**内容
+- **大纲侧栏**：右侧抽屉列出 H1/H2/H3，点击跳转
+- 图片块渲染（走你的身份下载媒体）
+- **字体与字号**：系统/宋体/楷体/圆体/等宽 + **导入本地字体**（ttf/otf/woff/woff2），字号 10–24px
+- 右键菜单改块类型、上移/下移、删除
+- Ctrl+S 保存；保存前自动写 Markdown 备份
+
+## 安装
+
+```bash
+# 1. 放进 DSH 插件目录
+git clone https://github.com/<you>/dsh-feishu-plugin.git ~/.dsh/plugins/feishu-plugin
+
+# 2. 依赖（与宿主共用同一份，用 junction 指过去，Windows）
+#    node_modules/<包> → DSH 自带的那套 @deepseek-ai/*
+
+# 3. 在 profile 里登记（~/.dsh/profiles/<profile>/package.json）
+#    dependencies: { "feishu-plugin": "link:.../feishu-plugin" }
+#    dsh.profile.bundles 末尾追加 "feishu-plugin"
+```
+
+改完 profile 需要重载 DSH。
+
+## 配置
+
+在 profile 的 `cordis.patch.yml` 里覆盖：
+
+```yaml
+- id: feishu
+  config:
+    appId: cli_xxxxxxxxxxxx
+    appSecret: xxxxxxxxxxxxxxxxxxxxxx
+    domain: feishu            # 或 lark
+    bridgePort: 6820
+    redirectUri: http://127.0.0.1:6820/oauth/callback
+    scopes: drive:drive space:document:retrieve docx:document im:resource
+```
+
+### 飞书开放平台要开的权限
+
+| 权限 | 身份 | 用途 |
+| --- | --- | --- |
+| `drive:drive` | 用户 | 列文件夹、建文件夹、重命名、移动、删除 |
+| `docx:document` | 用户 | 新建文档、读写正文块、改标题 |
+| `space:document:retrieve` | 用户 | 云空间检索（可替代上一项） |
+| `im:message` | 应用 | 读群消息 |
+| `im:message:send_as_bot` | 应用 | 以机器人身份发消息 |
+| `im:chat:readonly` | 应用 | 列机器人所在的群 |
+| `im:resource` | 应用 | 下载消息里的图片 |
+
+**重定向 URL** 必须与控制台「安全设置」里登记的一致，默认 `http://127.0.0.1:6820/oauth/callback`。
+
+权限变更后要**创建版本 → 申请发布 → 审批通过**才生效；已授权的 token 不会自动长出新权限，需要重新授权。
+
+## 架构
+
+```
+lib/index.js     Cordis 插件（host 半）：飞书客户端 + OAuth + 7 个 agent 工具 + 本地桥
+lib/bridge.js    面板用的 HTTP 桥（/feishu-panel/*）
+lib/userauth.js  OAuth 授权码流程、token 刷新、权限缺口判断
+lib/markdown.js  Markdown ⇄ 飞书 docx 块转换
+lib/client.js    侧栏面板（client 半）：会话 / 文档 / 网页版
+```
+
+面板桥跑在 6820–6825（自动探测空闲端口），所有请求只监听 127.0.0.1。
+
+**身份用在哪**：
+
+| 场景 | 身份 |
+| --- | --- |
+| 会话列表、收发消息、下载消息图片 | 应用（机器人） |
+| 云空间浏览、建/改/移/删、文档读写 | 用户（OAuth） |
+
+## 开发
+
+```bash
+node scripts/lint.mjs          # 语法检查
+node scripts/test-client.mjs   # 用 react-dom/server 渲染面板，验证 bundle 能加载
+node scripts/test-bridge.mjs   # 本地起桥，逐个端点自检
+node scripts/shots.mjs         # 无头浏览器截三张界面图
+```
+
+## 发布
+
+```bash
+node scripts/release.mjs "新功能：xxx"   # bump patch + 更新 CHANGELOG + commit + tag + push
+```
+
+## 已知限制
+
+- 保存采取「先追加新块 → 再删旧块」，中途失败最多内容重复，不会清空文档
+- 保存会重建全部块，因此飞书里对块设置的特殊样式（颜色、缩进）会丢
+- 只支持 docx；表格、多维表格能列出和移动，但不在面板里编辑
+- 字体设置只影响面板内的显示，不改飞书文档本身的字体
+
+## License
+
+MIT

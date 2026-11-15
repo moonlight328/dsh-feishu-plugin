@@ -1,0 +1,11 @@
+# feishu-plugin 的 bundle patch：往 profile 的层树里插一行。
+# 行 id 就是 settings 命名空间名（feishu），凭证由 profile 的 cordis.patch.yml 覆盖写入。
+- insert:
+    - id: feishu
+      name: feishu-plugin
+      config:
+        appId: ''
+        appSecret: ''
+        domain: feishu
+        defaultChatId: ''
+        defaultFolderToken: ''

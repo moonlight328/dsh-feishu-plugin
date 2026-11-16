@@ -1,6 +1,6 @@
 {
   "name": "feishu-plugin",
-  "version": "0.6.0",
+  "version": "0.6.1",
   "private": true,
   "description": "飞书接入 DSH 侧栏：收发群消息、浏览云空间文件夹、读写飞书文档（双身份 + 大纲 + 字体字号 + 移动）",
   "type": "module",
@@ -48,6 +48,8 @@
     "lint": "node scripts/lint.mjs",
     "test:client": "node scripts/test-client.mjs",
     "test:bridge": "node scripts/test-bridge.mjs",
+    "test:upload": "node scripts/test-upload.mjs",
+    "check:creds": "node scripts/check-creds.mjs",
     "release": "node scripts/release.mjs"
   },
   "dependencies": {

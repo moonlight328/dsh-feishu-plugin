@@ -10,6 +10,7 @@ const state = {
   blocks: [],
   appendCalls: [],
   deleteCalls: [],
+  patchCalls: [],
   readDocCalls: 0,
   revision: 11,
 };
@@ -18,6 +19,10 @@ const fakeFeishu = {
   settings: () => ({ baseUrl: 'https://open.feishu.cn', appId: 'cli_fake', appSecret: 'fake', domain: 'feishu' }),
   listChildBlocks: async () => state.blocks.map((b) => ({ ...b })),
   documentRevision: async () => state.revision,
+  updateBlockText: async (documentId, blockId, text) => {
+    state.patchCalls.push({ blockId, text });
+    return {};
+  },
   readDoc: async () => {
     state.readDocCalls += 1;
     return 'doc';
@@ -195,6 +200,57 @@ try {
   state.appendCalls.length = 0;
   const noRev = await post('/save', { id: 'doc1', blocks: [{ type: 'p', text: 'x' }], identity: 'user' });
   check('不带 revision 时不检查冲突', noRev.status === 200, `status=${noRev.status}`);
+
+  // ── 增量保存：有表格/带格式的文档也能改纯文字段落 ────────────────────────
+  const para = makeBlock(2, '原文');
+  const tableBlock = makeBlock(29);
+  const boldBlock = makeBlock(2, '加粗段落');
+  boldBlock.text.elements[0].text_run.text_element_style = { bold: true };
+  state.blocks = [para, tableBlock, boldBlock];
+  state.patchCalls.length = 0;
+  state.appendCalls.length = 0;
+  state.deleteCalls.length = 0;
+  state.revision = 20;
+  const inc = await post('/save', {
+    id: 'doc1',
+    incremental: true,
+    identity: 'user',
+    revision: 20,
+    blocks: [
+      { blockId: para.block_id, type: 'p', text: '改过的文字' },
+      { blockId: tableBlock.block_id, type: 'unsupported', text: '' },
+      { blockId: boldBlock.block_id, type: 'p', text: '加粗段落' },
+    ],
+  });
+  check('增量保存成功', inc.status === 200 && inc.body?.mode === 'incremental', `status=${inc.status} mode=${inc.body?.mode}`);
+  check('只 PATCH 了纯文本那一块', state.patchCalls.length === 1, `patch=${state.patchCalls.length}`);
+  check('PATCH 的是对的 blockId', state.patchCalls[0]?.blockId === para.block_id, state.patchCalls[0]?.blockId);
+  check('PATCH 的是新文字', state.patchCalls[0]?.text === '改过的文字', state.patchCalls[0]?.text);
+  check('没有整篇追加', state.appendCalls.length === 0);
+  check('没有整篇删除', state.deleteCalls.length === 0);
+  check('带样式的块被跳过', inc.body?.skippedRich === 1, `skippedRich=${inc.body?.skippedRich}`);
+  check('不认识的块被跳过', inc.body?.skippedUnknown === 1, `skippedUnknown=${inc.body?.skippedUnknown}`);
+  check('updated 只算真改的', inc.body?.updated === 1, `updated=${inc.body?.updated}`);
+
+  // 增删段落 → 增量模式拒绝（结构被锁）
+  state.patchCalls.length = 0;
+  const locked = await post('/save', {
+    id: 'doc1',
+    incremental: true,
+    identity: 'user',
+    blocks: [{ blockId: para.block_id, type: 'p', text: '少了一段' }],
+  });
+  check('增删段落被拒（STRUCTURE_LOCKED）', locked.status === 400 && locked.body?.code === 'STRUCTURE_LOCKED', `status=${locked.status} code=${locked.body?.code}`);
+  check('被拒时零 PATCH', state.patchCalls.length === 0);
+  check('被拒时提示里说清块数不一致', String(locked.body?.error || '').includes('不能增删段落'), locked.body?.error);
+
+  // 纯文本文档不走增量 → 整篇覆盖（mode=full）
+  state.blocks = [makeBlock(2, 'a'), makeBlock(2, 'b')];
+  state.appendCalls.length = 0;
+  state.deleteCalls.length = 0;
+  const full = await post('/save', { id: 'doc1', identity: 'user', blocks: [{ type: 'p', text: '新内容' }] });
+  check('纯文本文档仍走整篇覆盖', full.status === 200 && full.body?.mode === 'full', `mode=${full.body?.mode}`);
+  check('整篇覆盖确实追加并删除', state.appendCalls.length === 1 && state.deleteCalls.length === 1);
 
   // ── /docblocks 要标出不支持块和带样式块 ──────────────────────────────────
   state.blocks = [makeBlock(2, '普通段'), makeBlock(29), makeBlock(2, '加粗')];

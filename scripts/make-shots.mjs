@@ -121,6 +121,36 @@ const moveSteps = openDocs + `
 
 const shots = [
   [
+    // 撤销：改一段文字 → Ctrl+Z → 应该退回原文
+    'undo',
+    `setTimeout(() => { document.querySelectorAll('.fs-tab')[1].click(); }, 300);
+     setTimeout(() => { const rows = document.querySelectorAll('.fs-drow'); (rows[2] || rows[0]).click(); }, 900);
+     setTimeout(() => {
+       const pick = () => document.querySelectorAll('.fs-block-text')[1];
+       const t = pick();
+       const before = (t || {}).textContent || '';
+       if (t) {
+         t.focus();
+         t.textContent = before + '【临时输入】';
+         t.dispatchEvent(new Event('input', { bubbles: true }));
+       }
+       setTimeout(() => {
+         const typed = (pick() || {}).textContent || '';
+         window.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', code: 'KeyZ', ctrlKey: true, bubbles: true, cancelable: true }));
+         setTimeout(() => {
+           const after = (pick() || {}).textContent || '';
+           const typedOk = typed.includes('【临时输入】');
+           const undoOk = after === before;
+           const ok = typedOk && undoOk;
+           const banner = document.createElement('div');
+           banner.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:9999;background:' + (ok ? '#16a34a' : '#dc2626') + ';color:#fff;font:12px/1.5 system-ui;padding:8px 10px;white-space:pre-wrap';
+           banner.textContent = (ok ? 'UNDO OK' : 'UNDO FAIL') + '\\n输入后=' + (typedOk ? '含新增文字' : '没写进去') + '\\n撤销后=' + (undoOk ? '与原文一致' : '不一致：' + after.slice(0, 30));
+           document.body.appendChild(banner);
+         }, 200);
+       }, 200);
+     }, 1300);`
+  ],
+  [
     'drag',
     `setTimeout(() => { document.querySelectorAll('.fs-tab')[1].click(); }, 300);
      setTimeout(() => { const rows = document.querySelectorAll('.fs-drow'); (rows[2] || rows[0]).click(); }, 900);

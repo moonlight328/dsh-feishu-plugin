@@ -44,7 +44,8 @@ const mockBlocks = `{ unsupported: 1, styled: 1, blocks: [
   { id: 'b7', type: 'ordered', text: '再看要不要拆成两篇', supported: true },
   { id: 'b8', type: 'ordered', text: '最后调标题', supported: true },
   { id: 'b9', type: 'unsupported', text: '', supported: false, kind: '表格', blockType: 29 },
-  { id: 'b10', type: 'p', text: '这里先留空，等编辑确认。', supported: true, rich: true },
+  { id: 'b10', type: 'p', text: '这段有 加粗 和 链接 还有 代码', supported: true, rich: true,
+    spans: [{ text: '这段有 ' }, { text: '加粗', bold: true }, { text: ' 和 ' }, { text: '链接', link: 'https://example.com' }, { text: ' 还有 ' }, { text: '代码', code: true }] },
   { id: 'b11', type: 'p', text: '', supported: true },
 ] }`;
 
@@ -120,6 +121,31 @@ const moveSteps = openDocs + `
      }, 1500);`;
 
 const shots = [
+  [
+    // 选中文字应该浮出格式条
+    'toolbar',
+    `setTimeout(() => { document.querySelectorAll('.fs-tab')[1].click(); }, 300);
+     setTimeout(() => { const rows = document.querySelectorAll('.fs-drow'); (rows[2] || rows[0]).click(); }, 900);
+     setTimeout(() => {
+       const texts = [...document.querySelectorAll('.fs-block-text')].filter((t) => (t.textContent || '').trim().length > 3);
+       const target = texts[texts.length - 1] || texts[0];
+       if (!target) { document.title = 'no block'; return; }
+       target.focus();
+       const range = document.createRange();
+       range.selectNodeContents(target);
+       const sel = window.getSelection();
+       sel.removeAllRanges();
+       sel.addRange(range);
+       document.dispatchEvent(new Event('selectionchange'));
+       setTimeout(() => {
+         const bar = document.querySelector('.fs-fmt');
+         const banner = document.createElement('div');
+         banner.style.cssText = 'position:fixed;right:6px;bottom:6px;z-index:9999;background:' + (bar ? '#16a34a' : '#dc2626') + ';color:#fff;font:11px/1.4 system-ui;padding:6px 8px;border-radius:6px';
+         banner.textContent = (bar ? 'TOOLBAR OK' : 'TOOLBAR FAIL') + ' 按钮数=' + (bar ? bar.querySelectorAll('.fs-fmt-btn').length : 0);
+         document.body.appendChild(banner);
+       }, 250);
+     }, 1400);`
+  ],
   [
     // 乐观发送：点发送后消息应立刻出现在列表里（不等服务端）
     'send',

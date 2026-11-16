@@ -19,8 +19,8 @@ const fakeFeishu = {
   settings: () => ({ baseUrl: 'https://open.feishu.cn', appId: 'cli_fake', appSecret: 'fake', domain: 'feishu' }),
   listChildBlocks: async () => state.blocks.map((b) => ({ ...b })),
   documentRevision: async () => state.revision,
-  updateBlockText: async (documentId, blockId, text) => {
-    state.patchCalls.push({ blockId, text });
+  updateBlockText: async (documentId, blockId, payload) => {
+    state.patchCalls.push({ blockId, payload });
     return {};
   },
   readDoc: async () => {
@@ -225,7 +225,7 @@ try {
   check('增量保存成功', inc.status === 200 && inc.body?.mode === 'incremental', `status=${inc.status} mode=${inc.body?.mode}`);
   check('只 PATCH 了纯文本那一块', state.patchCalls.length === 1, `patch=${state.patchCalls.length}`);
   check('PATCH 的是对的 blockId', state.patchCalls[0]?.blockId === para.block_id, state.patchCalls[0]?.blockId);
-  check('PATCH 的是新文字', state.patchCalls[0]?.text === '改过的文字', state.patchCalls[0]?.text);
+  check('PATCH 的是新文字', state.patchCalls[0]?.payload === '改过的文字', String(state.patchCalls[0]?.payload));
   check('没有整篇追加', state.appendCalls.length === 0);
   check('没有整篇删除', state.deleteCalls.length === 0);
   check('带样式的块被跳过', inc.body?.skippedRich === 1, `skippedRich=${inc.body?.skippedRich}`);
@@ -252,6 +252,31 @@ try {
   check('纯文本文档仍走整篇覆盖', full.status === 200 && full.body?.mode === 'full', `mode=${full.body?.mode}`);
   check('整篇覆盖确实追加并删除', state.appendCalls.length === 1 && state.deleteCalls.length === 1);
 
+
+  // ── 行内样式：前端带了 spans 就能连样式一起写回 ──────────────────────────
+  const richBlock = makeBlock(2, '加粗原文');
+  richBlock.text.elements[0].text_run.text_element_style = { bold: true };
+  state.blocks = [richBlock];
+  state.patchCalls.length = 0;
+  const withSpans = await post('/save', {
+    id: 'doc1',
+    incremental: true,
+    identity: 'user',
+    blocks: [{ blockId: richBlock.block_id, type: 'p', text: '加粗改过了', spans: [{ text: '加粗改过了', bold: true }] }],
+  });
+  check('带样式块 + 带 spans：不跳过', withSpans.body?.skippedRich === 0, `skippedRich=${withSpans.body?.skippedRich}`);
+  check('送出去的是带样式的 elements', Array.isArray(state.patchCalls[0]?.payload) && state.patchCalls[0].payload[0]?.text_run?.text_element_style?.bold === true, JSON.stringify(state.patchCalls[0]?.payload).slice(0, 140));
+
+  // 同样的块，前端没带 spans → 跳过（不敢把加粗冲掉）
+  state.patchCalls.length = 0;
+  const noSpans = await post('/save', {
+    id: 'doc1',
+    incremental: true,
+    identity: 'user',
+    blocks: [{ blockId: richBlock.block_id, type: 'p', text: '新文字但没带样式' }],
+  });
+  check('带样式块 + 没带 spans：跳过', noSpans.body?.skippedRich === 1, `skippedRich=${noSpans.body?.skippedRich}`);
+  check('跳过时零 PATCH', state.patchCalls.length === 0);
   // ── /docblocks 要标出不支持块和带样式块 ──────────────────────────────────
   state.blocks = [makeBlock(2, '普通段'), makeBlock(29), makeBlock(2, '加粗')];
   state.blocks[2].text.elements[0].text_run.text_element_style = { bold: true };

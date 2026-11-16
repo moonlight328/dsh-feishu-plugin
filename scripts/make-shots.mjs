@@ -121,6 +121,30 @@ const moveSteps = openDocs + `
 
 const shots = [
   [
+    // 乐观发送：点发送后消息应立刻出现在列表里（不等服务端）
+    'send',
+    `setTimeout(() => {
+       const ta = document.querySelector('.fs-composer textarea');
+       if (!ta) { document.title = 'no textarea'; return; }
+       const setter = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value').set;
+       setter.call(ta, '乐观发送测试：这条应该立刻出现');
+       ta.dispatchEvent(new Event('input', { bubbles: true }));
+       setTimeout(() => {
+         const btn = document.querySelector('.fs-send');
+         if (btn) btn.click();
+         setTimeout(() => {
+           const texts = [...document.querySelectorAll('.fs-bubble')].map((b) => b.textContent || '');
+           const ok = texts.some((t) => t.includes('乐观发送测试'));
+           const pending = Boolean(document.querySelector('.fs-msg-row[data-pending=true]')) || texts.some((t) => t.includes('发送中'));
+           const banner = document.createElement('div');
+           banner.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:9999;background:' + (ok ? '#16a34a' : '#dc2626') + ';color:#fff;font:12px/1.5 system-ui;padding:8px 10px;white-space:pre-wrap';
+           banner.textContent = (ok ? 'SEND OK' : 'SEND FAIL') + '  消息立刻可见=' + ok + '  出现发送中态=' + pending;
+           document.body.appendChild(banner);
+         }, 500);
+       }, 250);
+     }, 600);`
+  ],
+  [
     // 撤销：改一段文字 → Ctrl+Z → 应该退回原文
     'undo',
     `setTimeout(() => { document.querySelectorAll('.fs-tab')[1].click(); }, 300);

@@ -2,6 +2,10 @@
 
 版本号遵循 `主.次.补丁`：加功能进次版本，修 bug 进补丁版本。
 
+## 0.11.0（2026-11-16）
+
+- Agent6/7 收尾：发消息改成乐观插入（立刻可见、发送中态、失败变红可点重发，本地未确认消息不被轮询冲掉）；移动/重命名/删除后只更新本地列表，不再整页重拉；右键菜单支持 ↑↓ 选择 + Enter 执行（配 Esc 关闭）
+
 ## 0.10.0（2026-11-16）
 
 - P1/P3：撤销重做（自建历史栈，连续输入 600ms 内合并成一步，栈上限 120，Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y）；无障碍补齐（图标按钮 aria-label、页签 role=tablist/tab + aria-selected、菜单 role=menu/menuitem、弹层 role=dialog+aria-modal、块编辑区 role=textbox，右键菜单和所有弹层支持 Esc 关闭）

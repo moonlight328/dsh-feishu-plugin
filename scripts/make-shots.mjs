@@ -1,4 +1,4 @@
-// 用真实 client bundle 渲染三种状态并截图：会话页、文档列表、文档编辑（带大纲栏）。
+﻿// 用真实 client bundle 渲染三种状态并截图：会话页、文档列表、文档编辑（带大纲栏）。
 import fs from 'node:fs';
 import { execFileSync } from 'node:child_process';
 
@@ -41,7 +41,7 @@ window.fetch = async (url) => {
   const body = u.includes('/status') ? { ok: true, bot: { name: '测试机器人' } }
     : u.includes('/auth') ? { authorized: true, name: 'masuzu328', missing: [] }
     : u.includes('/chats') ? { chats: [{ chatId: 'c1', name: 'DSH会话管理', description: '群会话' }, { chatId: 'c2', name: '设计组', description: '群会话' }] }
-    : u.includes('/messages') ? { messages: [
+    : u.includes('/messages') ? { hasMore: true, pageToken: 'p2', messages: [
         { id: 'm5', type: 'text', text: '对，要么发群，要么建成飞书文档给你。', senderType: 'app', senderName: '机器人', createTime: String(Date.now()/1000 - 60) },
         { id: 'm4', type: 'text', text: '那以后文案写完直接丢这儿？', senderType: 'user', senderName: '成员', createTime: String(Date.now()/1000 - 120) },
         { id: 'm3', type: 'text', text: '笑哭', senderType: 'user', senderName: '成员', createTime: String(Date.now()/1000 - 180) },
@@ -81,6 +81,13 @@ const moveSteps = openDocs + `
      }, 1500);`;
 
 const shots = [
+  [
+    'find',
+    `setTimeout(() => { document.querySelectorAll('.fs-tab')[1].click(); }, 300);
+     setTimeout(() => { const rows = document.querySelectorAll('.fs-drow'); (rows[2] || rows[0]).click(); }, 900);
+     setTimeout(() => { const b = [...document.querySelectorAll('.fs-btn')].find((x) => x.textContent.trim() === '⌕'); b && b.click(); }, 1500);
+     setTimeout(() => { const i = document.querySelector('.fs-find-input'); if (i) { i.value = '删掉'; i.dispatchEvent(new Event('input', { bubbles: true })); } }, 1900);`
+  ],
   ['web', `setTimeout(() => { document.querySelectorAll('.fs-tab')[2].click(); }, 500);`],
   ['move', moveSteps],
   ['type', openDoc + `setTimeout(() => { const b = [...document.querySelectorAll('.fs-btn')].find((x) => x.textContent.trim() === 'Aa'); b && b.click(); }, 1500);`],

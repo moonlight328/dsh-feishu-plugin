@@ -45,6 +45,7 @@ const mockBlocks = `{ unsupported: 1, styled: 1, blocks: [
   { id: 'b8', type: 'ordered', text: '最后调标题', supported: true },
   { id: 'b9', type: 'unsupported', text: '', supported: false, kind: '表格', blockType: 29 },
   { id: 'b10', type: 'p', text: '这里先留空，等编辑确认。', supported: true, rich: true },
+  { id: 'b11', type: 'p', text: '', supported: true },
 ] }`;
 
 function page(steps) {
@@ -62,11 +63,25 @@ window.fetch = async (url) => {
     : u.includes('/auth') ? { authorized: true, name: 'masuzu328', missing: [] }
     : u.includes('/chats') ? { chats: [{ chatId: 'c1', name: 'DSH会话管理', description: '群会话' }, { chatId: 'c2', name: '设计组', description: '群会话' }] }
     : u.includes('/messages') ? { hasMore: true, pageToken: 'p2', messages: [
-        { id: 'm5', type: 'text', text: '对，要么发群，要么建成飞书文档给你。', senderType: 'app', senderName: '机器人', createTime: String(Date.now()/1000 - 60) },
-        { id: 'm4', type: 'text', text: '那以后文案写完直接丢这儿？', senderType: 'user', senderName: '成员', createTime: String(Date.now()/1000 - 120) },
-        { id: 'm3', type: 'text', text: '笑哭', senderType: 'user', senderName: '成员', createTime: String(Date.now()/1000 - 180) },
-        { id: 'm2', type: 'text', text: '看得见。这条是从 DSH 面板发出来的。', senderType: 'app', senderName: '机器人', createTime: String(Date.now()/1000 - 240) },
-        { id: 'm1', type: 'text', text: '看得见吗', senderType: 'user', senderName: '成员', createTime: String(Date.now()/1000 - 300) },
+        { id: 'm7', type: 'file', text: '[文件] 投放排期.xlsx', senderType: 'user', senderName: '成员', time: Date.now() - 30000,
+          media: { kind: 'file', fileKey: 'file_7', fileName: '投放排期.xlsx', size: 1536000 }, segments: [] },
+        { id: 'm6', type: 'post', text: '刚更新了方案 见文档 @小林 记得看 [OK]', senderType: 'user', senderName: '成员', time: Date.now() - 45000,
+          segments: [
+            { kind: 'text', text: '刚更新了方案 ' },
+            { kind: 'link', text: '见文档', href: 'https://my.feishu.cn/docx/abc' },
+            { kind: 'text', text: ' ' },
+            { kind: 'mention', text: '@小林', memberId: 'ou_lin' },
+            { kind: 'text', text: ' 记得看 ' },
+            { kind: 'emoji', text: '[OK]', emojiType: 'OK' },
+          ], media: null },
+        { id: 'm5', type: 'text', text: '对，要么发群，要么建成飞书文档给你。', senderType: 'app', senderName: '机器人', time: Date.now() - 60000,
+          segments: [{ kind: 'text', text: '对，要么发群，要么建成飞书文档给你。' }], media: null },
+        { id: 'm4', type: 'text', text: '那以后文案写完直接丢这儿？', senderType: 'user', senderName: '成员', time: Date.now() - 120000,
+          segments: [{ kind: 'text', text: '那以后文案写完直接丢这儿？' }], media: null },
+        { id: 'm2', type: 'text', text: '看得见。这条是从 DSH 面板发出来的。', senderType: 'app', senderName: '机器人', time: Date.now() - 240000,
+          segments: [{ kind: 'text', text: '看得见。这条是从 DSH 面板发出来的。' }], media: null },
+        { id: 'm1', type: 'text', text: '看得见吗', senderType: 'user', senderName: '成员', time: Date.now() - 300000,
+          segments: [{ kind: 'text', text: '看得见吗' }], media: null },
       ] }
     : u.includes('/drive') ? ${mockDrive}
     : u.includes('/docblocks') ? ${mockBlocks}
@@ -101,6 +116,19 @@ const moveSteps = openDocs + `
      }, 1500);`;
 
 const shots = [
+  [
+    'slash',
+    `setTimeout(() => { document.querySelectorAll('.fs-tab')[1].click(); }, 300);
+     setTimeout(() => { const rows = document.querySelectorAll('.fs-drow'); (rows[2] || rows[0]).click(); }, 900);
+     setTimeout(() => {
+       const all = document.querySelectorAll('.fs-block-text');
+       const text = all[all.length - 1];
+       if (text) {
+         text.focus();
+         text.dispatchEvent(new KeyboardEvent('keydown', { key: '/', code: 'Slash', bubbles: true, cancelable: true }));
+       }
+     }, 1500);`
+  ],
   [
     'find',
     `setTimeout(() => { document.querySelectorAll('.fs-tab')[1].click(); }, 300);

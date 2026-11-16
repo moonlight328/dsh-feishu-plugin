@@ -138,6 +138,77 @@ const moveSteps = openDocs + `
      }, 1500);`;
 
 const shots = [
+
+  [
+    // 右键改块类型：之前 onChange 被字面量 \n 注释掉，点了没反应
+    'typefix',
+    `setTimeout(() => { document.querySelectorAll('.fs-tab')[1].click(); }, 300);
+     setTimeout(() => { const rows = document.querySelectorAll('.fs-drow'); (rows[2] || rows[0]).click(); }, 900);
+     setTimeout(() => {
+       
+       const banner = (title, detail, ok) => {
+         const d = document.createElement('div');
+         d.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:9999;background:' + (ok ? '#16a34a' : '#dc2626') + ';color:#fff;font:11px/1.5 system-ui;padding:7px 9px;white-space:pre-wrap';
+         d.textContent = title + '  ' + detail;
+         document.body.appendChild(d);
+       };
+       const block = document.querySelector('.fs-block[data-type=p]');
+       if (!block) { banner('TYPEFIX SKIP', '没找到正文块', false); return; }
+       const rect = block.getBoundingClientRect();
+       block.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true, clientX: Math.round(rect.left + 50), clientY: Math.round(rect.top + 8) }));
+       setTimeout(() => {
+         const items = [...document.querySelectorAll('.fs-menu-item')];
+         const h1 = items.find((b) => (b.textContent || '').indexOf('标题 1') >= 0);
+         if (!h1) { banner('TYPEFIX FAIL', '菜单里没有「标题 1」，菜单项数=' + items.length, false); return; }
+         h1.click();
+         setTimeout(() => {
+           const count = document.querySelectorAll('.fs-block[data-type=h1]').length;
+           banner(count > 0 ? 'TYPEFIX OK' : 'TYPEFIX FAIL', 'h1 块数=' + count, count > 0);
+         }, 250);
+       }, 250);
+     }, 1400);`
+  ],
+  [
+    // 选中文字 → 格式条 → 块类型下拉 → 标题 1
+    'kindmenu',
+    `setTimeout(() => { document.querySelectorAll('.fs-tab')[1].click(); }, 300);
+     setTimeout(() => { const rows = document.querySelectorAll('.fs-drow'); (rows[2] || rows[0]).click(); }, 900);
+     setTimeout(() => {
+       
+       const banner = (title, detail, ok) => {
+         const d = document.createElement('div');
+         d.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:9999;background:' + (ok ? '#16a34a' : '#dc2626') + ';color:#fff;font:11px/1.5 system-ui;padding:7px 9px;white-space:pre-wrap';
+         d.textContent = title + '  ' + detail;
+         document.body.appendChild(d);
+       };
+       const texts = [...document.querySelectorAll('.fs-block-text')].filter((t) => (t.textContent || '').trim().length > 3);
+       const target = texts[0];
+       if (!target) { banner('KINDMENU SKIP', '没找到有字的块', false); return; }
+       target.focus();
+       const range = document.createRange();
+       range.selectNodeContents(target);
+       const sel = window.getSelection();
+       sel.removeAllRanges();
+       sel.addRange(range);
+       document.dispatchEvent(new Event('selectionchange'));
+       setTimeout(() => {
+         const kindBtn = document.querySelector('.fs-fmt-kind');
+         if (!kindBtn) { banner('KINDMENU FAIL', '格式条里没有块类型按钮', false); return; }
+         kindBtn.click();
+         setTimeout(() => {
+           const items = [...document.querySelectorAll('.fs-fmt-type-item')];
+           const h1 = items.find((b) => (b.textContent || '').trim() === '标题 1');
+           if (!h1) { banner('KINDMENU FAIL', '下拉里没有「标题 1」，项数=' + items.length, false); return; }
+           h1.click();
+           setTimeout(() => {
+             const count = document.querySelectorAll('.fs-block[data-type=h1]').length;
+             banner(count > 0 ? 'KINDMENU OK' : 'KINDMENU FAIL', 'h1 块数=' + count, count > 0);
+           }, 250);
+         }, 250);
+       }, 300);
+     }, 1400);`
+  ],
+
   [
     // 搜索框应该跨文件夹搜（走 /search）
     'search2',

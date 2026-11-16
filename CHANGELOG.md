@@ -2,6 +2,10 @@
 
 版本号遵循 `主.次.补丁`：加功能进次版本，修 bug 进补丁版本。
 
+## 0.7.0（2026-11-16）
+
+- P0 数据与安全：含表格/待办/引用/行内样式的文档保存改为拦截而非覆盖（备份改存块 JSON，块列表按 page_token 翻页取全）；桥强制 application/json、校验 Host、收紧 Origin、回调页 HTML 转义；保存/改名/删除全链路透传 identity；编辑器修输入法选词回车切段、Ctrl+S 真正生效、未保存标记与离开确认；有序列表按连续项编号，不支持块显示只读占位
+
 ## 0.6.1（2026-11-16）
 
 - 修 DSH 新版把 volatile 配置包成引用对象、导致 appId/appSecret 变成 [object Object] 而 tenant_access_token 报 10003；面板桥放行 dsh-app:// 自定义协议与私有网络预检，NEXT 壳里侧栏才能连上；/status 增加凭据形状诊断，新增 npm run check:creds

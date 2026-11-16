@@ -60,7 +60,15 @@ function page(steps) {
 <script>${reactUmd}</script><script>${reactDomUmd}</script>
 <script>
 const errs = [];
-window.addEventListener('error', (e) => errs.push(String(e.message)));
+window.addEventListener('error', (e) => {
+  errs.push(String(e.message));
+  try {
+    const d = document.createElement('div');
+    d.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:99999;background:#dc2626;color:#fff;font:11px/1.4 monospace;padding:6px;white-space:pre-wrap';
+    d.textContent = 'JS ERROR: ' + e.message;
+    document.body.appendChild(d);
+  } catch (_) {}
+});
 window.addEventListener('unhandledrejection', (e) => errs.push('rej: ' + (e.reason && e.reason.message)));
 window.fetch = async (url) => {
   const u = String(url);
@@ -91,6 +99,11 @@ window.fetch = async (url) => {
           segments: [{ kind: 'text', text: '看得见。这条是从 DSH 面板发出来的。' }], media: null },
         { id: 'm1', type: 'text', text: '看得见吗', senderType: 'user', senderName: '成员', time: Date.now() - 300000,
           segments: [{ kind: 'text', text: '看得见吗' }], media: null },
+      ] }
+    : u.includes('/search') ? { keyword: '拆书', files: [
+        { token: 's1', name: '起点拆书', type: 'docx' },
+        { token: 's2', name: '拆书方法论 v3', type: 'docx' },
+        { token: 's3', name: '拆书排期', type: 'sheet' },
       ] }
     : u.includes('/drive') ? ${mockDrive}
     : u.includes('/docblocks') ? ${mockBlocks}
@@ -125,6 +138,21 @@ const moveSteps = openDocs + `
      }, 1500);`;
 
 const shots = [
+  [
+    // 搜索框应该跨文件夹搜（走 /search）
+    'search2',
+    `setTimeout(() => {
+       const tab = document.querySelectorAll('.fs-tab')[1];
+       if (tab) tab.click();
+     }, 600);
+     setTimeout(() => {
+       const input = document.querySelector('.fs-search-input');
+       if (!input) return;
+       const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+       setter.call(input, '拆书');
+       input.dispatchEvent(new Event('input', { bubbles: true }));
+     }, 1500);`
+  ],
   [
     // 选中文字应该浮出格式条
     'toolbar',

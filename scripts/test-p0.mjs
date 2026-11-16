@@ -11,11 +11,13 @@ const state = {
   appendCalls: [],
   deleteCalls: [],
   readDocCalls: 0,
+  revision: 11,
 };
 
 const fakeFeishu = {
   settings: () => ({ baseUrl: 'https://open.feishu.cn', appId: 'cli_fake', appSecret: 'fake', domain: 'feishu' }),
   listChildBlocks: async () => state.blocks.map((b) => ({ ...b })),
+  documentRevision: async () => state.revision,
   readDoc: async () => {
     state.readDocCalls += 1;
     return 'doc';
@@ -163,6 +165,36 @@ try {
   check('640 块的文档保存成功', big.status === 200, `status=${big.status}`);
   check('删除范围覆盖全部 640 块', big.body?.removed === 640, `removed=${big.body?.removed}`);
   check('删除调用带的是 0..640', JSON.stringify(state.deleteCalls[0]) === '[0,640]', JSON.stringify(state.deleteCalls[0]));
+
+  // ── revision 冲突：别人改过就别默默覆盖 ──────────────────────────────────
+  state.blocks = [makeBlock(2, '第一段')];
+  state.revision = 11;
+  const info2 = await fetch(base + '/docblocks?id=doc1&identity=user');
+  const info2Body = await info2.json();
+  check('/docblocks 带出 revision', info2Body.revision === 11, `revision=${info2Body.revision}`);
+
+  state.appendCalls.length = 0;
+  state.deleteCalls.length = 0;
+  state.revision = 12; // 打开之后别人在飞书里改了
+  const conflict = await post('/save', { id: 'doc1', blocks: [{ type: 'p', text: '我的修改' }], identity: 'user', revision: 11 });
+  check('revision 对不上时返回 409', conflict.status === 409, `status=${conflict.status}`);
+  check('冲突带 REVISION_CONFLICT', conflict.body?.code === 'REVISION_CONFLICT', `code=${conflict.body?.code}`);
+  check('冲突给出新旧版本号', conflict.body?.revision?.expected === 11 && conflict.body?.revision?.current === 12, JSON.stringify(conflict.body?.revision));
+  check('冲突时零改动（不追加）', state.appendCalls.length === 0);
+  check('冲突时零改动（不删除）', state.deleteCalls.length === 0);
+
+  // 用户确认覆盖 → 带新 revision 重发应当成功
+  state.appendCalls.length = 0;
+  state.deleteCalls.length = 0;
+  const forced = await post('/save', { id: 'doc1', blocks: [{ type: 'p', text: '我的修改' }], identity: 'user', revision: 12 });
+  check('确认后用新 revision 重发成功', forced.status === 200, `status=${forced.status}`);
+  check('重发后确实写了块', state.appendCalls.length === 1, `append=${state.appendCalls.length}`);
+
+  // 不带 revision 时保持旧行为（不拦）
+  state.blocks = [makeBlock(2, '第一段')];
+  state.appendCalls.length = 0;
+  const noRev = await post('/save', { id: 'doc1', blocks: [{ type: 'p', text: 'x' }], identity: 'user' });
+  check('不带 revision 时不检查冲突', noRev.status === 200, `status=${noRev.status}`);
 
   // ── /docblocks 要标出不支持块和带样式块 ──────────────────────────────────
   state.blocks = [makeBlock(2, '普通段'), makeBlock(29), makeBlock(2, '加粗')];

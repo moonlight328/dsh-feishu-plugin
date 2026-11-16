@@ -117,6 +117,34 @@ const moveSteps = openDocs + `
 
 const shots = [
   [
+    'drag',
+    `setTimeout(() => { document.querySelectorAll('.fs-tab')[1].click(); }, 300);
+     setTimeout(() => { const rows = document.querySelectorAll('.fs-drow'); (rows[2] || rows[0]).click(); }, 900);
+     setTimeout(() => {
+       const blocks = [...document.querySelectorAll('.fs-block')];
+       const gutters = [...document.querySelectorAll('.fs-gutter')];
+       const before = blocks.map((b) => (b.querySelector('.fs-block-text') || {}).textContent || '').slice(0, 3);
+       const dt = new DataTransfer();
+       gutters[2].dispatchEvent(new DragEvent('dragstart', { bubbles: true, dataTransfer: dt }));
+       const target = blocks[0];
+       const rect = target.getBoundingClientRect();
+       const at = { bubbles: true, cancelable: true, dataTransfer: dt, clientX: rect.left + 20, clientY: rect.top + 4 };
+       target.dispatchEvent(new DragEvent('dragover', at));
+       setTimeout(() => {
+         target.dispatchEvent(new DragEvent('drop', at));
+         target.dispatchEvent(new DragEvent('dragend', { bubbles: true, dataTransfer: dt }));
+         setTimeout(() => {
+           const after = [...document.querySelectorAll('.fs-block')].map((b) => (b.querySelector('.fs-block-text') || {}).textContent || '').slice(0, 3);
+           const ok = after[0] === before[2] && after[1] === before[0];
+           const banner = document.createElement('div');
+           banner.style.cssText = 'position:fixed;left:0;right:0;top:0;z-index:9999;background:' + (ok ? '#16a34a' : '#dc2626') + ';color:#fff;font:12px/1.5 system-ui;padding:8px 10px;white-space:pre-wrap';
+           banner.textContent = (ok ? 'DRAG OK' : 'DRAG FAIL') + '\\n前:' + before.join(' | ') + '\\n后:' + after.join(' | ');
+           document.body.appendChild(banner);
+         }, 150);
+       }, 80);
+     }, 1400);`
+  ],
+  [
     'slash',
     `setTimeout(() => { document.querySelectorAll('.fs-tab')[1].click(); }, 300);
      setTimeout(() => { const rows = document.querySelectorAll('.fs-drow'); (rows[2] || rows[0]).click(); }, 900);

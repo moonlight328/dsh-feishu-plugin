@@ -11,6 +11,7 @@ const state = {
   appendCalls: [],
   deleteCalls: [],
   patchCalls: [],
+  doneCalls: [],
   readDocCalls: 0,
   revision: 11,
 };
@@ -21,6 +22,10 @@ const fakeFeishu = {
   documentRevision: async () => state.revision,
   updateBlockText: async (documentId, blockId, payload) => {
     state.patchCalls.push({ blockId, payload });
+    return {};
+  },
+  updateBlockDone: async (documentId, blockId, done) => {
+    state.doneCalls.push({ blockId, done });
     return {};
   },
   readDoc: async () => {
@@ -277,6 +282,33 @@ try {
   });
   check('带样式块 + 没带 spans：跳过', noSpans.body?.skippedRich === 1, `skippedRich=${noSpans.body?.skippedRich}`);
   check('跳过时零 PATCH', state.patchCalls.length === 0);
+
+  // ── 待办勾选：走 update_text_style + fields:[2] 这条独立通道 ──────────────
+  const todoBlock = { block_id: 'blk_todo_1', block_type: 17, parent_id: 'doc1', todo: { elements: [{ text_run: { content: '写周报' } }], style: { done: false } } };
+  state.blocks = [todoBlock];
+  state.patchCalls.length = 0;
+  state.doneCalls.length = 0;
+  const tick = await post('/save', {
+    id: 'doc1',
+    incremental: true,
+    identity: 'user',
+    blocks: [{ blockId: todoBlock.block_id, type: 'todo', text: '写周报', done: true, spans: [] }],
+  });
+  check('待办勾选保存成功', tick.status === 200, `status=${tick.status}`);
+  check('勾选走了独立通道', state.doneCalls.length === 1 && state.doneCalls[0].done === true, JSON.stringify(state.doneCalls));
+  check('勾选时没有多余地改文字', state.patchCalls.length === 0, `patch=${state.patchCalls.length}`);
+
+  // 勾选没变化 → 不该发请求
+  state.blocks = [{ ...todoBlock, todo: { ...todoBlock.todo, style: { done: true } } }];
+  state.doneCalls.length = 0;
+  state.patchCalls.length = 0;
+  await post('/save', {
+    id: 'doc1',
+    incremental: true,
+    identity: 'user',
+    blocks: [{ blockId: todoBlock.block_id, type: 'todo', text: '写周报', done: true, spans: [] }],
+  });
+  check('勾选没变就不发请求', state.doneCalls.length === 0 && state.patchCalls.length === 0);
   // ── /docblocks 要标出不支持块和带样式块 ──────────────────────────────────
   state.blocks = [makeBlock(2, '普通段'), makeBlock(29), makeBlock(2, '加粗')];
   state.blocks[2].text.elements[0].text_run.text_element_style = { bold: true };

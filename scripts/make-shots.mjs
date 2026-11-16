@@ -47,6 +47,10 @@ const mockBlocks = `{ unsupported: 1, styled: 1, blocks: [
   { id: 'b10', type: 'p', text: '这段有 加粗 和 链接 还有 代码', supported: true, rich: true,
     spans: [{ text: '这段有 ' }, { text: '加粗', bold: true }, { text: ' 和 ' }, { text: '链接', link: 'https://example.com' }, { text: ' 还有 ' }, { text: '代码', code: true }] },
   { id: 'b11', type: 'p', text: '', supported: true },
+  { id: 'b12', type: 'todo', text: '把封面图定下来', supported: true, done: false },
+  { id: 'b13', type: 'todo', text: '这版结构已经过了', supported: true, done: true },
+  { id: 'b14', type: 'quote', text: '先把能做完的做完，再谈优化。', supported: true },
+  { id: 'b15', type: 'divider', text: '', supported: true },
 ] }`;
 
 function page(steps) {
@@ -233,8 +237,8 @@ const shots = [
     `setTimeout(() => { document.querySelectorAll('.fs-tab')[1].click(); }, 300);
      setTimeout(() => { const rows = document.querySelectorAll('.fs-drow'); (rows[2] || rows[0]).click(); }, 900);
      setTimeout(() => {
-       const all = document.querySelectorAll('.fs-block-text');
-       const text = all[all.length - 1];
+       const all = [...document.querySelectorAll('.fs-block-text')];
+       const text = all.find((t) => !(t.textContent || '').trim()) || all[0];
        if (text) {
          text.focus();
          text.dispatchEvent(new KeyboardEvent('keydown', { key: '/', code: 'Slash', bubbles: true, cancelable: true }));
